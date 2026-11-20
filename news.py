@@ -1,4 +1,4 @@
-import os, requests, feedparser
+import os, time, requests, feedparser
 from google import genai
 from google.genai import types
 
@@ -16,9 +16,22 @@ ai = genai.Client(
     http_options=types.HttpOptions(timeout=60_000),  # 60s per call, so it can never hang
 )
 
-msg = ai.models.generate_content(
-    model=TEXT_MODEL,
-    contents=(
+
+def generate(model, contents, tries=4):
+    """Call Gemini, retrying temporary errors (503 high demand, 429 rate limit)."""
+    for i in range(tries):
+        try:
+            return ai.models.generate_content(model=model, contents=contents)
+        except Exception as e:
+            if i == tries - 1:
+                raise
+            wait = 15 * (i + 1)
+            print(f"{model} failed ({str(e)[:80]}); retrying in {wait}s")
+            time.sleep(wait)
+
+msg = generate(
+    TEXT_MODEL,
+    (
         "From these headlines, pick the top 3 AI news stories. "
         "Write each as one clear sentence in plain, professional English. "
         "Number them 1 to 3. No Hinglish, no extra commentary.\n\n" + heads
@@ -28,8 +41,9 @@ msg = ai.models.generate_content(
 image = None
 for name in IMAGE_MODELS:
     try:
-        resp = ai.models.generate_content(
-            model=name,
+        resp = generate(
+            name,
+            tries=2,
             contents=(
                 "Create a clean, modern editorial illustration (no text, no logos) "
                 "that represents today's top AI news:\n" + msg
