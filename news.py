@@ -1,5 +1,6 @@
 import os, requests, feedparser
 from google import genai
+from google.genai import types
 
 TOKEN = os.environ["TG_TOKEN"]
 CHAT = os.environ["TG_CHAT"]
@@ -10,7 +11,10 @@ IMAGE_MODELS = ["gemini-3.1-flash-image", "gemini-2.5-flash-image"]
 feed = feedparser.parse("https://news.google.com/rss/search?q=AI&hl=en-IN&gl=IN&ceid=IN:en")
 heads = "\n".join(e.title for e in feed.entries[:15])
 
-ai = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+ai = genai.Client(
+    api_key=os.environ["GEMINI_API_KEY"],
+    http_options=types.HttpOptions(timeout=60_000),  # 60s per call, so it can never hang
+)
 
 msg = ai.models.generate_content(
     model=TEXT_MODEL,
