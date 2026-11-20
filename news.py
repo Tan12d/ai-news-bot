@@ -29,6 +29,7 @@ def generate(model, contents, tries=4):
             print(f"{model} failed ({str(e)[:80]}); retrying in {wait}s")
             time.sleep(wait)
 
+
 def text_candidates():
     """Preferred model first, then other Flash text models your key can use."""
     names = [TEXT_MODEL]
@@ -48,9 +49,7 @@ def text_candidates():
 prompt = (
     "From these headlines, pick the top 3 AI news stories. "
     "Write each as one clear sentence in plain, professional English. "
-    "Number them 1 to 3. No Hinglish, no extra commentary.
-
-" + heads
+    "Number them 1 to 3. No Hinglish, no extra commentary.\n\n" + heads
 )
 
 msg = None
@@ -83,7 +82,7 @@ for name in IMAGE_MODELS:
             print("Image generated with", name)
             break
     except Exception as e:
-        print(f"Image model {name} failed: {e}")
+        print(f"Image model {name} failed: {str(e)[:100]}")
 
 caption = "☀️ Today's top AI news\n\n" + msg
 base = f"https://api.telegram.org/bot{TOKEN}"
