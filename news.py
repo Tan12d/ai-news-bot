@@ -29,14 +29,40 @@ def generate(model, contents, tries=4):
             print(f"{model} failed ({str(e)[:80]}); retrying in {wait}s")
             time.sleep(wait)
 
-msg = generate(
-    TEXT_MODEL,
-    (
-        "From these headlines, pick the top 3 AI news stories. "
-        "Write each as one clear sentence in plain, professional English. "
-        "Number them 1 to 3. No Hinglish, no extra commentary.\n\n" + heads
-    ),
-).text.strip()
+def text_candidates():
+    """Preferred model first, then other Flash text models your key can use."""
+    names = [TEXT_MODEL]
+    try:
+        skip = ("image", "tts", "live", "audio", "embed", "native", "thinking", "robotics")
+        extra = sorted(
+            (m.name.removeprefix("models/") for m in ai.models.list()
+             if "flash" in m.name and not any(k in m.name for k in skip)),
+            reverse=True,
+        )
+        names += [n for n in extra if n != TEXT_MODEL][:3]
+    except Exception as e:
+        print("Could not list models:", str(e)[:100])
+    return names
+
+
+prompt = (
+    "From these headlines, pick the top 3 AI news stories. "
+    "Write each as one clear sentence in plain, professional English. "
+    "Number them 1 to 3. No Hinglish, no extra commentary.
+
+" + heads
+)
+
+msg = None
+for name in text_candidates():
+    try:
+        msg = generate(name, prompt, tries=2).text.strip()
+        print("Text generated with", name)
+        break
+    except Exception as e:
+        print(f"Text model {name} failed: {str(e)[:100]}")
+if not msg:
+    raise SystemExit("All text models failed")
 
 image = None
 for name in IMAGE_MODELS:
